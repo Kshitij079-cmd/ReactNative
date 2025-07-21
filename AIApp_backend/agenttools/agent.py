@@ -65,3 +65,7 @@ root_agent = Agent(
     ),
     tools=[get_weather, get_current_time],
 )
+
+async def run_agent(message: str) -> str:
+    response = await root_agent.run(message)
+    return response.text
