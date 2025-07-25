@@ -1,16 +1,9 @@
 import datetime
 from zoneinfo import ZoneInfo
+# from adk.models.agent import AgentBase
 from google.adk.agents import Agent
 
 def get_weather(city: str) -> dict:
-    """Retrieves the current weather report for a specified city.
-
-    Args:
-        city (str): The name of the city for which to retrieve the weather report.
-
-    Returns:
-        dict: status and result or error msg.
-    """
     if city.lower() == "new york":
         return {
             "status": "success",
@@ -27,23 +20,12 @@ def get_weather(city: str) -> dict:
 
 
 def get_current_time(city: str) -> dict:
-    """Returns the current time in a specified city.
-
-    Args:
-        city (str): The name of the city for which to retrieve the current time.
-
-    Returns:
-        dict: status and result or error msg.
-    """
-
     if city.lower() == "new york":
         tz_identifier = "America/New_York"
     else:
         return {
             "status": "error",
-            "error_message": (
-                f"Sorry, I don't have timezone information for {city}."
-            ),
+            "error_message": f"Sorry, I don't have timezone information for {city}.",
         }
 
     tz = ZoneInfo(tz_identifier)
@@ -54,6 +36,22 @@ def get_current_time(city: str) -> dict:
     return {"status": "success", "report": report}
 
 
+# class WeatherTimeAgent(AgentBase):
+#     async def run(self, input: str, session_id: str = None) -> str:
+#         lower_input = input.lower()
+
+#         if "weather" in lower_input:
+#             city = "New York"
+#             result = get_weather(city)
+#             return result["report"] if result["status"] == "success" else result["error_message"]
+
+#         elif "time" in lower_input:
+#             city = "New York"
+#             result = get_current_time(city)
+#             return result["report"] if result["status"] == "success" else result["error_message"]
+
+#         else:
+#             return "Sorry, I can only help with weather and time-related queries."
 root_agent = Agent(
     name="weather_time_agent",
     model="gemini-2.0-flash",
@@ -65,7 +63,3 @@ root_agent = Agent(
     ),
     tools=[get_weather, get_current_time],
 )
-
-async def run_agent(message: str) -> str:
-    response = await root_agent.run(message)
-    return response.text

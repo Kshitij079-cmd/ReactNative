@@ -1,4 +1,4 @@
-from agent import run_agent
+from agent import root_agent
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
@@ -16,7 +16,7 @@ async def ask_agent(data: userData):
         raise HTTPException(status_code=400, detail="Message cannot be empty.")
 
     try:
-        reply = await run_agent(user_message)
+        reply = await root_agent(user_message)
         return {"reply": reply}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
