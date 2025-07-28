@@ -1,7 +1,7 @@
 import datetime
 from zoneinfo import ZoneInfo
 # from adk.models.agent import AgentBase
-from google.adk.agents import Agent
+from google.adk.agents import Agent # type: ignore
 
 def get_weather(city: str) -> dict:
     if city.lower() == "new york":
@@ -17,8 +17,7 @@ def get_weather(city: str) -> dict:
             "status": "error",
             "error_message": f"Weather information for '{city}' is not available.",
         }
-
-
+    
 def get_current_time(city: str) -> dict:
     if city.lower() == "new york":
         tz_identifier = "America/New_York"
@@ -36,22 +35,7 @@ def get_current_time(city: str) -> dict:
     return {"status": "success", "report": report}
 
 
-# class WeatherTimeAgent(AgentBase):
-#     async def run(self, input: str, session_id: str = None) -> str:
-#         lower_input = input.lower()
 
-#         if "weather" in lower_input:
-#             city = "New York"
-#             result = get_weather(city)
-#             return result["report"] if result["status"] == "success" else result["error_message"]
-
-#         elif "time" in lower_input:
-#             city = "New York"
-#             result = get_current_time(city)
-#             return result["report"] if result["status"] == "success" else result["error_message"]
-
-#         else:
-#             return "Sorry, I can only help with weather and time-related queries."
 root_agent = Agent(
     name="weather_time_agent",
     model="gemini-2.0-flash",

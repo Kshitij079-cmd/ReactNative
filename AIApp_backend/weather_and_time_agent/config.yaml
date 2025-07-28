@@ -1,0 +1,6 @@
+id: weather-time-agent
+name: Weather and Time Agent
+description: Get weather and time info for a given city
+entrypoint: agent.py
+class_name: root_agent
+
