@@ -5,9 +5,10 @@
  * @format
  */
 
-import * as React from 'react';
-import {NavigationContainer} from '@react-navigation/native';
+import  React from 'react';
+
 import Navigator from './navigation/Navigator';
+import { NavigationContainer } from '@react-navigation/native';
 
 
 const App = () => {

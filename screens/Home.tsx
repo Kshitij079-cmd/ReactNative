@@ -2,7 +2,7 @@ import { NewAppScreen } from '@react-native/new-app-screen';
 import { StatusBar, StyleSheet, useColorScheme, View, SafeAreaView, ScrollView } from 'react-native';
 
 
-function Home() {
+const Home = () => {
   const isDarkMode = useColorScheme() === 'dark';
 
   return (
