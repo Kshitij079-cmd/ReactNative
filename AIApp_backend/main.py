@@ -1,7 +1,22 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import json
 import asyncio
 import base64
+import warnings
 
 from pathlib import Path
 from dotenv import load_dotenv
@@ -12,16 +27,16 @@ from google.genai.types import (
     Blob,
 )
 
-from google.adk.runners import Runner
+from google.adk.runners import InMemoryRunner
 from google.adk.agents import LiveRequestQueue
 from google.adk.agents.run_config import RunConfig
-from google.adk.sessions.in_memory_session_service import InMemorySessionService
 
 from fastapi import FastAPI, WebSocket
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from weather_and_time_agent.agent import root_agent
+from weather_and_time_agent.agent import root_agent  # Import the agent
+warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
 #
 # ADK Streaming
@@ -30,8 +45,7 @@ from weather_and_time_agent.agent import root_agent
 # Load Gemini API Key
 load_dotenv()
 
-APP_NAME = "weather_and_time_agent"
-session_service = InMemorySessionService()
+APP_NAME = "ADK Streaming example"
 
 
 async def start_agent_session(user_id, is_audio=False):
@@ -64,14 +78,11 @@ async def start_agent_session(user_id, is_audio=False):
     )
     return live_events, live_request_queue
 
-async def agent_to_client_messaging(
-    websocket: WebSocket, live_events: AsyncIterable[Event | None]
-):
+
+async def agent_to_client_messaging(websocket, live_events):
     """Agent to client communication"""
     while True:
         async for event in live_events:
-            if event is None:
-                continue
 
             # If the turn complete or interrupted, send it
             if event.turn_complete or event.interrupted:
@@ -84,41 +95,33 @@ async def agent_to_client_messaging(
                 continue
 
             # Read the Content and its first Part
-            part = event.content and event.content.parts and event.content.parts[0]
+            part: Part = (
+                event.content and event.content.parts and event.content.parts[0]
+            )
             if not part:
                 continue
 
-            # Make sure we have a valid Part
-            if not isinstance(part, types.Part):
-                continue
-
-            # Only send text if it's a partial response (streaming)
-            # Skip the final complete message to avoid duplication
-            if part.text and event.partial:
-                message = {
-                    "mime_type": "text/plain",
-                    "data": part.text,
-                    "role": "model",
-                }
-                await websocket.send_text(json.dumps(message))
-                print(f"[AGENT TO CLIENT]: text/plain: {part.text}")
-
             # If it's audio, send Base64 encoded audio data
-            is_audio = (
-                part.inline_data
-                and part.inline_data.mime_type
-                and part.inline_data.mime_type.startswith("audio/pcm")
-            )
+            is_audio = part.inline_data and part.inline_data.mime_type.startswith("audio/pcm")
             if is_audio:
                 audio_data = part.inline_data and part.inline_data.data
                 if audio_data:
                     message = {
                         "mime_type": "audio/pcm",
-                        "data": base64.b64encode(audio_data).decode("ascii"),
-                        "role": "model",
+                        "data": base64.b64encode(audio_data).decode("ascii")
                     }
                     await websocket.send_text(json.dumps(message))
                     print(f"[AGENT TO CLIENT]: audio/pcm: {len(audio_data)} bytes.")
+                    continue
+
+            # If it's text and a parial text, send it
+            if part.text and event.partial:
+                message = {
+                    "mime_type": "text/plain",
+                    "data": part.text
+                }
+                await websocket.send_text(json.dumps(message))
+                print(f"[AGENT TO CLIENT]: text/plain: {message}")
 
 
 async def client_to_agent_messaging(websocket, live_request_queue):
@@ -143,27 +146,27 @@ async def client_to_agent_messaging(websocket, live_request_queue):
         else:
             raise ValueError(f"Mime type not supported: {mime_type}")
 
+
 #
 # FastAPI web app
 #
 
 app = FastAPI()
 
-# STATIC_DIR = Path("static")
-# app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
 
 
 @app.get("/")
 async def root():
-    """Serves the index.html"""
-    reponse_from_root = "Welcome to the Weather and Time Agent!"
-    return reponse_from_root
+    websocketStart =    """Serves starts """
+    print(websocketStart)
+    return websocketStart
 
 
 @app.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: int, is_audio: str):
-    """Client websocket endpoint"""
-
+    websocket_endpoint_indicator =   """Client websocket endpoint"""
+    print(f"websocket_endpoint_indicator {websocket_endpoint_indicator}")
     # Wait for client connection
     await websocket.accept()
     print(f"Client #{user_id} connected, audio mode: {is_audio}")
@@ -189,4 +192,3 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, is_audio: str):
 
     # Disconnected
     print(f"Client #{user_id} disconnected")
-  
