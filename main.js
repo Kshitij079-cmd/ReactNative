@@ -1,4 +1,5 @@
 /* eslint-disable no-unused-vars */
+import { useState } from "react";
 const BASE_URL = 'http://10.0.2.2:8000'; 
 // const BASE_URL = 'http://localhost:8000'; // ADK server base URL
 
@@ -27,9 +28,9 @@ const send = async (url, data, header = __header) => {
         throw error;
     }
 };
-       const agentName = 'weather_and_time_agent'; // from class WeatherTimeAgent
-    const userId = 'test_user';
-    const sessionId = Math.random().toString().substring(10)
+const agentName = 'weather_and_time_agent'; // from class WeatherTimeAgent
+const userId = 'test_user';
+const sessionId = Math.random().toString().substring(10)
 export const activateSession = async () => {//this wiil activate the session
 
     return await send(
@@ -64,62 +65,83 @@ export const askAgent = async (message) => {
     return sendingMessageTOAgent
 };
 
-let websocket = null;
+let ws = null;
 let currentMessageId = null;
 let is_audio = false; // Default to text messages
+ // Use 'ws' for Node.js environment, or a compatible library for React Native
+// Placeholder for WebSocket connection
+export const connectWebSocket = (onMessage, onClose, onError) => {
 
-export const connectWebsocket = ({
-  onOpen,
-  onMessage,
-  onClose,
-  audioPlayerNode = null,
-}) => {
-  const wsURL = `ws://10.0.2.2:8000/ws/${sessionId}?is_audio=false`;
-  websocket = new WebSocket(wsURL);
- websocket.onopen = () => {
-    console.log('✅ WebSocket connection opened');
-    onOpen?.();
-  };
+  // In a real React Native app, you'd use a WebSocket library here.
+  // For example, 'react-native-webrtc' or a custom native module.
+  console.log('Connecting WebSocket...');
 
-  websocket.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    console.log('[📨 AGENT → CLIENT]', data);
+  try {
 
-    if (data.turn_complete) {
-      currentMessageId = null;
-      return;
-    }
+    // Replace with your actual WebSocket server URL
+    const wsUrl = `ws://10.0.2.2:8000/ws/${sessionId}?is_audio=false`;
+    ws = new WebSocket(wsUrl);
 
-    if (data.mime_type === 'text/plain') {
-      onMessage?.(data.data); // Pass text to UI
-    }
+    ws.onopen = (event) => {
+      console.log('WebSocket connection opened.');
 
-    if (data.mime_type === 'audio/pcm' && audioPlayerNode) {
-      const arrayBuffer = base64ToArray(data.data);
-      audioPlayerNode.port.postMessage(arrayBuffer);
-    }
-  };
+    };
 
-  websocket.onerror = (error) => {
-    console.error('WebSocket error:', error);
-  };
+    ws.onmessage = (event) => {
+      try {
+        const message_from_server = JSON.parse(event.data);
+        console.log('[AGENT TO CLIENT] ', message_from_server);
+        onMessage(message_from_server);
+      } catch (e) {
+        console.error('Failed to parse WebSocket message:', e);
+      }
+    };
 
-  websocket.onclose = (event) => {
-    console.log('❌ WebSocket closed', event.code, "Reason:", event.reason);
-    onClose?.();
-  };
-};
+    ws.onclose = () => {
+      console.log('WebSocket connection closed.');
+      onClose();
+    };
 
-export const sendMessage = (messageObj) => {
-  if (websocket && websocket.readyState === WebSocket.OPEN) {
-    websocket.send(JSON.stringify(messageObj));
-  } else {
-    console.warn('WebSocket not ready. Message not sent.');
+    ws.onerror = (e) => {
+      console.error('WebSocket error:', e);
+      onError(e);
+    };
+  } catch (error) {
+    console.error('WebSocket connection failed:', error);
+    
   }
-  return websocket;
+  return ws;
 };
 
-function base64ToArray(base64) {
+export const sendMessage = ( message) => {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    try {
+      ws.send(JSON.stringify(message));
+      console.log('[CLIENT TO AGENT] ', message);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+    }
+  } else {
+    console.warn('WebSocket not open. Message not sent:', message);
+  }
+};
+
+
+
+// Placeholder for audio playback
+const startAudioPlayback = async (pcmData) => {
+  console.log('Playing audio...');
+  // In React Native, you'd use a library like 'expo-av' or a custom native module
+  // to play PCM audio data.
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      console.log('Audio playback finished (simulated).');
+      resolve();
+    }, 300);
+  });
+};
+
+const base64ToArray=(base64)=> {
   const binaryString = window.atob(base64);
   const len = binaryString.length;
   const bytes = new Uint8Array(len);
@@ -128,3 +150,4 @@ function base64ToArray(base64) {
   }
   return bytes.buffer;
 }
+

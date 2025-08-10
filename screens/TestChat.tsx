@@ -1,5 +1,7 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import React, { useEffect, useState } from 'react';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   TextInput,
@@ -12,52 +14,105 @@ import {
   Alert
 } from 'react-native';
 import { TMessage } from '../type';
-import { connectWebsocket, sendMessage as sendSocketMessage } from '../main';
+
 
 const ChatScreen = () => {
   const [message, setMessage] = useState<string>('');
   const [chatHistory, setChatHistory] = useState<TMessage[]>([]);
 
+  const sessionId = Math.random().toString().substring(10)
+  const localhost = "10.0.2.2:8000"
+  const audioStatus = false
 
-
- useEffect(() => {
-   const establish_ws_connection = connectWebsocket({
-      onOpen: () => {
-        console.log('WebSocket connection established');
-        setChatHistory(prev => [
-          ...prev,
-          {
-            _id: String(Date.now()),
-            text: 'Connection opened',
-            user: 'system',
-            createdAt: Date.now(),
-          },
-        ]);
-      },
-      onMessage: (msgText:any) => {
-        const newAgentMessage: TMessage = {
-          _id: String(Date.now() + 1),
-          text: msgText,
-          user: 'adk',
+  // Replace with your actual WebSocket server URL
+  const wsUrl = `ws://${localhost}/ws/${sessionId}?is_audio=${audioStatus}`;
+  const  ws = useRef(new WebSocket(wsUrl));
+  const randomId_generator = () => {
+    const int_num = Math.floor(Math.random() * 900000) + 100000;
+    const str_num = int_num.toString();
+    return str_num;
+  }
+  useEffect(() => {
+    ws.current.onopen = () => {
+      setMessage("Hi Server")
+      const trimmedMessage = message.trim();
+      console.log(trimmedMessage);
+      sendSocketMessage({
+        mime_type: 'text/plain',
+        data: "Hi Server",
+      });
+      console.log('WebSocket connection established');
+      setChatHistory(prev => [
+        ...prev,
+        {
+          _id: randomId_generator(),
+          text: 'Connection opened',
+          user: 'system',
           createdAt: Date.now(),
-        };
-        setChatHistory(prev => [...prev, newAgentMessage]);
-      },
-      onClose: () => {
-        setChatHistory(prev => [
+        },
+      ]);
+      setMessage("")
+    };
+
+ ws.current.onmessage = (event) => {
+  try {
+    const msg = JSON.parse(event.data);
+
+    if (msg.mime_type === "text/plain" && msg.data) {
+      setChatHistory(prev => {
+        // If last message is from bot, append text
+        if (prev.length > 0 && prev[prev.length - 1].user === 'adk') {
+          const updatedLast = {
+            ...prev[prev.length - 1],
+            text: prev[prev.length - 1].text + msg.data
+          };
+          return [...prev.slice(0, -1), updatedLast];
+        }
+        // Else create a new bot message
+        return [
           ...prev,
-          {
-            _id: String(Date.now()),
-            text: 'Connection closed',
-            user: 'system',
-            createdAt: Date.now(),
-          },
-        ]);
-      },
-    });
-    
-  }  
-  , []);
+          { _id: Date.now(), text: msg.data, user: 'adk', createdAt: Date.now() }
+        ];
+      });
+    }
+  } catch (err) {
+    console.error("Error parsing WS message:", err);
+  }
+};
+
+
+    ws.current.onclose = () => {
+      setChatHistory(prev => [
+        ...prev,
+        {
+          _id: sessionId+123,
+          text: 'Connection closed',
+          user: 'system',
+          createdAt: Date.now(),
+        },
+      ]);
+    };
+
+    ws.current.onerror = (e) => {
+      console.error('WebSocket error:', e);
+    };
+  }
+    , []);
+
+     const sendSocketMessage = (msg:any) => {
+
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      try {
+        ws.current.send(JSON.stringify(msg));
+ 
+        console.log('[CLIENT TO AGENT] ', msg);
+      } catch (error) {
+        console.error('Failed to send message:', error);
+      }
+    } else {
+      console.warn('WebSocket not open. Message not sent:', message);
+    }
+  }; 
 
   const sendMessage = () => {
     const trimmedMessage = message.trim();
@@ -67,7 +122,7 @@ const ChatScreen = () => {
     }
 
     const newUserMessage: TMessage = {
-      _id: String(Date.now()),
+      _id: randomId_generator(),
       text: trimmedMessage,
       user: 'user',
       createdAt: Date.now(),
@@ -83,7 +138,7 @@ const ChatScreen = () => {
       });
     } catch (error) {
       const systemMessage: TMessage = {
-        _id: String(Date.now() + 1),
+        _id: randomId_generator(),
         text: 'Error sending message over WebSocket',
         user: 'system',
         createdAt: Date.now(),
@@ -117,7 +172,7 @@ const ChatScreen = () => {
     >
       <FlatList
         data={chatHistory}
-        keyExtractor={(item) => String(item._id)}
+       keyExtractor={(item) => String(item._id)}
         renderItem={renderChatItem}
         style={styles.chatList}
         contentContainerStyle={styles.chatListContent}
@@ -135,14 +190,14 @@ const ChatScreen = () => {
           title="Send"
           onPress={sendMessage}
           disabled={!message.trim()}
-          color="#007AFF"
+          color={"blue"}
         />
       </View>
     </KeyboardAvoidingView>
   );
 };
 
-export default ChatScreen;
+
 
 // (styles remain unchanged)
 const styles = StyleSheet.create({
@@ -225,3 +280,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
+
+
+export default ChatScreen;

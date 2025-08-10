@@ -4,14 +4,19 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Home from '../screens/Home';
 import Prompter from '../screens/Prompter';
 import TestChatScreen from '../screens/TestChat';
-import { activateSession, } from '../main';
+import { activateSession, connectWebSocket, } from '../main';
+import SampleChat from '../screens/samplechat';
+
 
 const Tab = createBottomTabNavigator();
 const ChatSessionCreate = () => {
  //call session activation api from main.js
 //  const starttheSession = activateSession()
 //  console.log('Chat session created:', starttheSession);
- 
+//call connectWebsocket's onOpen function
+
+  console.log('Chat session created and WebSocket connected');
+  
 }
 
 const Navigator = () => {
@@ -36,12 +41,13 @@ const Navigator = () => {
                 // Prevent default action (e.g., navigating to the screen)
                 // e.preventDefault(); 
                 console.log('Chat Screen showed up!');
-                // ChatSessionCreate(); 
+                ChatSessionCreate(); 
                 // Call the function to create a chat session
                 // Add your custom logic here
               },
             }}
       />
+      <Tab.Screen name="Socket Chat" component={SampleChat}/>
     </Tab.Navigator>
   )
 }
